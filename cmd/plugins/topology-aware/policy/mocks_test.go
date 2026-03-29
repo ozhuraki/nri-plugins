@@ -266,7 +266,7 @@ func (fake *mockSystem) CoreKindCPUs(sysfs.CoreKind) cpuset.CPUSet {
 	return cpuset.New()
 }
 func (fake *mockSystem) CoreKinds() []sysfs.CoreKind {
-	return nil
+	return []sysfs.CoreKind{}
 }
 func (fake *mockSystem) IDSetForCPUs(cpus cpuset.CPUSet, f func(cpu sysfs.CPU) idset.ID) idset.IDSet {
 	panic("unimplemented")
