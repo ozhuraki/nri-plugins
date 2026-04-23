@@ -15,8 +15,10 @@
 package topologyaware
 
 import (
+	"fmt"
 	"os"
 	"path"
+	"sort"
 	"strings"
 	"testing"
 
@@ -26,6 +28,19 @@ import (
 	system "github.com/containers/nri-plugins/pkg/sysfs"
 	"github.com/containers/nri-plugins/pkg/utils"
 )
+
+type PodResources struct {
+	cpu  int // total CPU allocated for all containers in the pod
+	rcpu int // total reserved CPU allocated for all containers in the pod
+	mem  int // total memory allocated for all containers in the pod
+}
+
+type TestState struct {
+	cpu    int                      // free CPU on node for non-reserved pods
+	rcpu   int                      // free CPU on node for reserved pods
+	mem    int                      // free memory on node
+	podRes map[string]*PodResources // map running pod name to resources allocated to it
+}
 
 // setupTestPolicy creates a policy from the server sysfs testdata.
 func setupTestPolicy(t *testing.T) (*policy, string) {
@@ -144,6 +159,75 @@ func TestLibmemPoolZoneCapacityAndFree(t *testing.T) {
 	}
 	if free < 0 || free > capacity {
 		t.Errorf("expected 0 <= free (%d) <= capacity (%d)", free, capacity)
+	}
+}
+
+func (s *TestState) String() string {
+	pr := []string{}
+	pods := make([]string, 0, len(s.podRes))
+	for pod := range s.podRes {
+		pods = append(pods, pod)
+	}
+	sort.Strings(pods)
+	for _, pod := range pods {
+		res := s.podRes[pod]
+		switch {
+		case res.rcpu == 0:
+			pr = append(pr, fmt.Sprintf("%s:%dmCPU/%dM", pod, res.cpu, res.mem))
+		case res.cpu == 0:
+			pr = append(pr, fmt.Sprintf("%s:%dmRCPU/%dM", pod, res.rcpu, res.mem))
+		default:
+			pr = append(pr, fmt.Sprintf("%s:%dmCPU/%dmRCPU/%dM", pod, res.cpu, res.rcpu, res.mem))
+		}
+	}
+	return fmt.Sprintf("[free:%dmCPU/%dmRCPU/%dM pods:[%s]]", s.cpu, s.rcpu, s.mem, strings.Join(pr, " "))
+}
+
+func createPod(pod string, cpu, rcpu, mem int) m.StateChange {
+	return func(current m.State) m.State {
+		s := current.(*TestState)
+		if s.cpu < cpu || s.rcpu < rcpu || s.mem < mem {
+			// refuse from state change if not enough resources
+			return nil
+		}
+		if _, ok := s.podRes[pod]; ok {
+			// refuse to create pod if it is already running
+			return nil
+		}
+		newPodRes := make(map[string]*PodResources)
+		for k, v := range s.podRes {
+			newPodRes[k] = v
+		}
+		newPodRes[pod] = &PodResources{cpu, rcpu, mem}
+		return &TestState{
+			cpu:    s.cpu - cpu,
+			rcpu:   s.rcpu - rcpu,
+			mem:    s.mem - mem,
+			podRes: newPodRes,
+		}
+	}
+}
+
+func deletePod(pod string) m.StateChange {
+	return func(current m.State) m.State {
+		s := current.(*TestState)
+		res, ok := s.podRes[pod]
+		if !ok {
+			// refuse to delete pod if it is not running
+			return nil
+		}
+		newPodRes := make(map[string]*PodResources)
+		for k, v := range s.podRes {
+			if k != pod {
+				newPodRes[k] = v
+			}
+		}
+		return &TestState{
+			cpu:    s.cpu + res.cpu,
+			rcpu:   s.rcpu + res.rcpu,
+			mem:    s.mem + res.mem,
+			podRes: newPodRes,
+		}
 	}
 }
 
