@@ -242,22 +242,22 @@ func newModel() *m.Model {
 	model.From(func(current m.State) []*m.Transition {
 		s := current.(*TestState)
 		return m.When(true,
-			m.OnAction("NAME=be0 CONTCOUNT=1 CPU=0 MEM=0 create besteffort").Do(createPod("be0", 1*0, 0, 1*0)),
-			m.OnAction("NAME=be1 CONTCOUNT=3 CPU=0 MEM=0 create besteffort").Do(createPod("be1", 3*0, 0, 3*0)),
-			m.OnAction("NAME=rbe0 CONTCOUNT=2 CPU=0 MEM=0 namespace=kube-system create besteffort").Do(createPod("rbe0", 0, 2*0, 2*0)),
+			m.OnAction("NAME=be0 CONTCOUNT=1 CPU=0 MEM=0 create besteffort").Register("NAME=be0 CONTCOUNT=1 CPU=0 MEM=0 create besteffort", createPod("be0", 1*0, 0, 1*0)).Do(createPod("be0", 1*0, 0, 1*0)),
+			m.OnAction("NAME=be1 CONTCOUNT=3 CPU=0 MEM=0 create besteffort").Register("NAME=be1 CONTCOUNT=3 CPU=0 MEM=0 create besteffort", createPod("be1", 3*0, 0, 3*0)).Do(createPod("be1", 3*0, 0, 3*0)),
+			m.OnAction("NAME=rbe0 CONTCOUNT=2 CPU=0 MEM=0 namespace=kube-system create besteffort").Register("NAME=rbe0 CONTCOUNT=2 CPU=0 MEM=0 namespace=kube-system create besteffort", createPod("rbe0", 0, 2*0, 2*0)).Do(createPod("rbe0", 0, 2*0, 2*0)),
 			m.When(s.mem > 0,
 				m.When(s.cpu >= 200,
-					m.OnAction("NAME=gu0 CONTCOUNT=1 CPU=200m MEM=1500M create guaranteed").Do(createPod("gu0", 1*200, 0, 1*1500)),
-					m.OnAction("NAME=gu1 CONTCOUNT=2 CPU=1000m MEM=500M create guaranteed").Do(createPod("gu1", 2*1000, 0, 2*500)),
-					m.OnAction("NAME=gu2 CONTCOUNT=2 CPU=1200m MEM=4500M create guaranteed").Do(createPod("gu2", 2*1200, 0, 2*4500)),
-					m.OnAction("NAME=gu3 CONTCOUNT=3 CPU=2000m MEM=500M create guaranteed").Do(createPod("gu3", 3*2000, 0, 3*500)),
-					m.OnAction("NAME=gu4 CONTCOUNT=1 CPU=4200m MEM=100M create guaranteed").Do(createPod("gu4", 1*4200, 0, 1*100)),
-					m.OnAction("NAME=bu0 CONTCOUNT=1 CPU=1200m MEM=50M CPUREQ=900m MEMREQ=49M CPULIM=1200m MEMLIM=50M create burstable").Do(createPod("bu0", 1*1200, 0, 1*50)),
-					m.OnAction("NAME=bu1 CONTCOUNT=2 CPU=1900m MEM=300M CPUREQ=1800m MEMREQ=299M CPULIM=1900m MEMLIM=300M create burstable").Do(createPod("bu1", 2*1900, 0, 2*300)),
+					m.OnAction("NAME=gu0 CONTCOUNT=1 CPU=200m MEM=1500M create guaranteed").Register("NAME=gu0 CONTCOUNT=1 CPU=200m MEM=1500M create guaranteed", createPod("gu0", 1*200, 0, 1*1500)).Do(createPod("gu0", 1*200, 0, 1*1500)),
+					m.OnAction("NAME=gu1 CONTCOUNT=2 CPU=1000m MEM=500M create guaranteed").Register("NAME=gu1 CONTCOUNT=2 CPU=1000m MEM=500M create guaranteed", createPod("gu1", 2*1000, 0, 2*500)).Do(createPod("gu1", 2*1000, 0, 2*500)),
+					m.OnAction("NAME=gu2 CONTCOUNT=2 CPU=1200m MEM=4500M create guaranteed").Register("NAME=gu2 CONTCOUNT=2 CPU=1200m MEM=4500M create guaranteed", createPod("gu2", 2*1200, 0, 2*4500)).Do(createPod("gu2", 2*1200, 0, 2*4500)),
+					m.OnAction("NAME=gu3 CONTCOUNT=3 CPU=2000m MEM=500M create guaranteed").Register("NAME=gu3 CONTCOUNT=3 CPU=2000m MEM=500M create guaranteed", createPod("gu3", 3*2000, 0, 3*500)).Do(createPod("gu3", 3*2000, 0, 3*500)),
+					m.OnAction("NAME=gu4 CONTCOUNT=1 CPU=4200m MEM=100M create guaranteed").Register("NAME=gu4 CONTCOUNT=1 CPU=4200m MEM=100M create guaranteed", createPod("gu4", 1*4200, 0, 1*100)).Do(createPod("gu4", 1*4200, 0, 1*100)),
+					m.OnAction("NAME=bu0 CONTCOUNT=1 CPU=1200m MEM=50M CPUREQ=900m MEMREQ=49M CPULIM=1200m MEMLIM=50M create burstable").Register("NAME=bu0 CONTCOUNT=1 CPU=1200m MEM=50M CPUREQ=900m MEMREQ=49M CPULIM=1200m MEMLIM=50M create burstable", createPod("bu0", 1*1200, 0, 1*50)).Do(createPod("bu0", 1*1200, 0, 1*50)),
+					m.OnAction("NAME=bu1 CONTCOUNT=2 CPU=1900m MEM=300M CPUREQ=1800m MEMREQ=299M CPULIM=1900m MEMLIM=300M create burstable").Register("NAME=bu1 CONTCOUNT=2 CPU=1900m MEM=300M CPUREQ=1800m MEMREQ=299M CPULIM=1900m MEMLIM=300M create burstable", createPod("bu1", 2*1900, 0, 2*300)).Do(createPod("bu1", 2*1900, 0, 2*300)),
 				),
 				m.When(s.rcpu > 99,
-					m.OnAction("NAME=rgu0 CONTCOUNT=2 CPU=100m MEM=1000M namespace=kube-system create guaranteed").Do(createPod("rgu0", 0, 2*100, 2*1000)),
-					m.OnAction("NAME=rbu0 CONTCOUNT=1 CPU=100m MEM=100M CPUREQ=99m MEMREQ=99M CPULIM=100m MEMLIM=100M namespace=kube-system create burstable").Do(createPod("rbu0", 0, 1*100, 1*100)),
+					m.OnAction("NAME=rgu0 CONTCOUNT=2 CPU=100m MEM=1000M namespace=kube-system create guaranteed").Register("NAME=rgu0 CONTCOUNT=2 CPU=100m MEM=1000M namespace=kube-system create guaranteed", createPod("rgu0", 0, 2*100, 2*1000)).Do(createPod("rgu0", 0, 2*100, 2*1000)),
+					m.OnAction("NAME=rbu0 CONTCOUNT=1 CPU=100m MEM=100M CPUREQ=99m MEMREQ=99M CPULIM=100m MEMLIM=100M namespace=kube-system create burstable").Register("NAME=rbu0 CONTCOUNT=1 CPU=100m MEM=100M CPUREQ=99m MEMREQ=99M CPULIM=100m MEMLIM=100M namespace=kube-system create burstable", createPod("rbu0", 0, 1*100, 1*100)).Do(createPod("rbu0", 0, 1*100, 1*100)),
 				),
 			),
 		)
@@ -268,12 +268,12 @@ func newModel() *m.Model {
 		ts := []*m.Transition{}
 		for _, pod := range podNames {
 			if _, ok := s.podRes[pod]; ok {
-				ts = append(ts, m.OnAction("NAME=%s vm-command 'kubectl delete pod %s --now'", pod, pod).Do(deletePod(pod))...)
+				ts = append(ts, m.OnAction("NAME=%s vm-command 'kubectl delete pod %s --now'", pod, pod).Register(fmt.Sprintf("NAME=%s vm-command 'kubectl delete pod %s --now'", pod, pod), deletePod(pod)).Do(deletePod(pod))...)
 			}
 		}
 		for _, pod := range rPodNames {
 			if _, ok := s.podRes[pod]; ok {
-				ts = append(ts, m.OnAction("NAME=%s vm-command 'kubectl delete pod --namespace kube-system %s --now'", pod, pod).Do(deletePod(pod))...)
+				ts = append(ts, m.OnAction("NAME=%s vm-command 'kubectl delete pod --namespace kube-system %s --now'", pod, pod).Register(fmt.Sprintf("NAME=%s vm-command 'kubectl delete pod --namespace kube-system %s --now'", pod, pod), deletePod(pod)).Do(deletePod(pod))...)
 			}
 		}
 		return ts
