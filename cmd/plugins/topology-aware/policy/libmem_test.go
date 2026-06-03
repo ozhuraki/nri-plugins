@@ -154,6 +154,9 @@ func malloc(p *policy, size int64) (string, error) {
 	mallocSeq++
 	id := fmt.Sprintf("test-container-%d", mallocSeq)
 
+	_, callerFile, callerLine, _ := runtime.Caller(1)
+	fmt.Printf("malloc: id=%s size=%d called from %s:%d\n", id, size, callerFile, callerLine)
+
 	var pool Node
 	for _, n := range p.pools {
 		if n.IsLeafNode() && n.HasMemoryType(memoryDRAM) {
@@ -182,6 +185,8 @@ func malloc(p *policy, size int64) (string, error) {
 
 // free releases a previously committed memory allocation for the given container ID.
 func free(p *policy, id string) error {
+	_, callerFile, callerLine, _ := runtime.Caller(1)
+	fmt.Printf("free: id=%s called from %s:%d\n", id, callerFile, callerLine)
 	return p.releaseMem(id)
 }
 
@@ -465,6 +470,7 @@ func TestLibmemGofmbt2(t *testing.T) {
 				newAllocs[k] = v
 			}
 			newAllocs[name] = size
+			fmt.Printf("mallocFn %s (%d MiB)\n", name, size>>20)
 			return &LibmemState{freeBytes: s.freeBytes - size, allocs: newAllocs}
 		}
 	}
@@ -482,6 +488,7 @@ func TestLibmemGofmbt2(t *testing.T) {
 					newAllocs[k] = v
 				}
 			}
+			fmt.Printf("freeFn %s (%d MiB)\n", name, size>>20)
 			return &LibmemState{freeBytes: s.freeBytes + size, allocs: newAllocs}
 		}
 	}
