@@ -136,6 +136,48 @@ func TestLibmemGetMemOfferByHintsNoHints(t *testing.T) {
 	}
 }
 
+// TestLibmemReleaseMem verifies that releaseMem releases a previously committed
+// memory allocation, and returns an error for an unknown ID.
+func TestLibmemReleaseMem(t *testing.T) {
+	p, dir := setupTestPolicy(t)
+	defer removeAll(t, dir)
+
+	var pool Node
+	for _, n := range p.pools {
+		if n.IsLeafNode() && n.HasMemoryType(memoryDRAM) {
+			pool = n
+			break
+		}
+	}
+	if pool == nil {
+		t.Fatal("no leaf DRAM node found in test system")
+	}
+
+	ctr := &mockContainer{returnValueForGetID: "test-container-1"}
+	req := &request{
+		memType:   memoryDRAM,
+		memReq:    64 * 1024 * 1024, // 64 MiB
+		container: ctr,
+	}
+
+	offer, err := p.getMemOffer(pool, req)
+	if err != nil {
+		t.Fatalf("getMemOffer failed: %v", err)
+	}
+	if _, _, err := offer.Commit(); err != nil {
+		t.Fatalf("Offer.Commit() failed: %v", err)
+	}
+
+	if err := p.releaseMem(ctr.GetID()); err != nil {
+		t.Errorf("releaseMem failed for known ID: %v", err)
+	}
+
+	// Releasing the same ID again should return an error (unknown request).
+	if err := p.releaseMem(ctr.GetID()); err == nil {
+		t.Error("expected error releasing unknown ID, got nil")
+	}
+}
+
 // TestLibmemPoolZoneCapacityAndFree verifies that poolZoneCapacity returns a
 // positive value and that poolZoneFree does not exceed it.
 func TestLibmemPoolZoneCapacityAndFree(t *testing.T) {
