@@ -24,11 +24,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-logr/logr"
 	m "github.com/ozhuraki/gofmbt/gofmbt"
 	cfgapi "github.com/containers/nri-plugins/pkg/apis/config/v1alpha1/resmgr/policy/topologyaware"
 	policyapi "github.com/containers/nri-plugins/pkg/resmgr/policy"
 	system "github.com/containers/nri-plugins/pkg/sysfs"
 	"github.com/containers/nri-plugins/pkg/utils"
+	"k8s.io/klog/v2"
 )
 
 type PodResources struct {
@@ -433,7 +435,9 @@ func TestLibmemGofmbt2(t *testing.T) {
 
 	flag.Parse()
 
+	klog.SetLogger(logr.Discard())
 	p, dir := setupTestPolicy(t)
+	klog.ClearLogger()
 	defer removeAll(t, dir)
 
 	allocNames := []string{"a0", "a1", "a2", "a3", "a4"}
