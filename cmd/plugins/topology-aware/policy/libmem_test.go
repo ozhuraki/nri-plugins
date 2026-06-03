@@ -559,6 +559,8 @@ func TestLibmemGofmbt2(t *testing.T) {
 		for i := 0; i <= covStats.MaxStep; i++ {
 			testStep++
 			step := path[i]
+			fmt.Printf("\necho === step:%d coverage:%d state:%v\n", testStep, coverer.Coverage(), state)
+			fmt.Println(step.Action())
 			action := step.Action().String()
 			switch {
 			case strings.HasPrefix(action, "malloc "):
