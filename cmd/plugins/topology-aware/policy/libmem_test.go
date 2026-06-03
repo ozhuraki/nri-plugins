@@ -154,8 +154,14 @@ func malloc(p *policy, size int64) (string, error) {
 	mallocSeq++
 	id := fmt.Sprintf("test-container-%d", mallocSeq)
 
-	_, callerFile, callerLine, _ := runtime.Caller(1)
-	fmt.Printf("malloc: id=%s size=%d called from %s:%d\n", id, size, callerFile, callerLine)
+	fmt.Printf("malloc: id=%s size=%d\n", id, size)
+	for i := 1; i <= callerDepth; i++ {
+		pc, file, line, ok := runtime.Caller(i)
+		if !ok {
+			break
+		}
+		fmt.Printf("  [%d] %s (%s:%d)\n", i, runtime.FuncForPC(pc).Name(), file, line)
+	}
 
 	var pool Node
 	for _, n := range p.pools {
@@ -185,8 +191,14 @@ func malloc(p *policy, size int64) (string, error) {
 
 // free releases a previously committed memory allocation for the given container ID.
 func free(p *policy, id string) error {
-	_, callerFile, callerLine, _ := runtime.Caller(1)
-	fmt.Printf("free: id=%s called from %s:%d\n", id, callerFile, callerLine)
+	fmt.Printf("free: id=%s\n", id)
+	for i := 1; i <= callerDepth; i++ {
+		pc, file, line, ok := runtime.Caller(i)
+		if !ok {
+			break
+		}
+		fmt.Printf("  [%d] %s (%s:%d)\n", i, runtime.FuncForPC(pc).Name(), file, line)
+	}
 	return p.releaseMem(id)
 }
 
@@ -377,7 +389,15 @@ var (
 
 	maxLibmem2Steps int
 	libmem2Search   int
+	callerDepth     int
 )
+
+// init switches CommandLine to ContinueOnError so that the test framework's
+// first flag.Parse() tolerates flags registered later inside test functions
+// (e.g. -caller-depth), allowing them to be passed from the command line.
+func init() {
+	flag.CommandLine.Init(os.Args[0], flag.ContinueOnError)
+}
 
 func TestLibmemGofmbt(t *testing.T) {
 	flag.IntVar(&maxMem, "mem", 7500, "memory available for test pods")
@@ -437,6 +457,7 @@ func TestLibmemGofmbt(t *testing.T) {
 func TestLibmemGofmbt2(t *testing.T) {
 	flag.IntVar(&maxLibmem2Steps, "libmem2-steps", 1000, "number of test steps for TestLibmemGofmbt2")
 	flag.IntVar(&libmem2Search, "libmem2-search-depth", 4, "look-ahead depth for TestLibmemGofmbt2")
+	flag.IntVar(&callerDepth, "caller-depth", 1, "number of caller frames printed by malloc() and free()")
 
 	flag.Parse()
 
