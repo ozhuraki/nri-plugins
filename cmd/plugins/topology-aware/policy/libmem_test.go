@@ -470,7 +470,8 @@ func TestLibmemGofmbt2(t *testing.T) {
 				newAllocs[k] = v
 			}
 			newAllocs[name] = size
-			fmt.Printf("mallocFn %s (%d MiB)\n", name, size>>20)
+			pc, _, _, _ := runtime.Caller(1)
+			fmt.Printf("mallocFn %s (%d MiB) called from %s\n", name, size>>20, runtime.FuncForPC(pc).Name())
 			return &LibmemState{freeBytes: s.freeBytes - size, allocs: newAllocs}
 		}
 	}
@@ -488,7 +489,8 @@ func TestLibmemGofmbt2(t *testing.T) {
 					newAllocs[k] = v
 				}
 			}
-			fmt.Printf("freeFn %s (%d MiB)\n", name, size>>20)
+			pc, _, _, _ := runtime.Caller(1)
+			fmt.Printf("freeFn %s (%d MiB) called from %s\n", name, size>>20, runtime.FuncForPC(pc).Name())
 			return &LibmemState{freeBytes: s.freeBytes + size, allocs: newAllocs}
 		}
 	}
