@@ -136,11 +136,14 @@ func TestLibmemGetMemOfferByHintsNoHints(t *testing.T) {
 	}
 }
 
-// TestLibmemReleaseMem verifies that releaseMem releases a previously committed
-// memory allocation, and returns an error for an unknown ID.
-func TestLibmemReleaseMem(t *testing.T) {
-	p, dir := setupTestPolicy(t)
-	defer removeAll(t, dir)
+// mallocSeq is used to generate unique container IDs in malloc.
+var mallocSeq int
+
+// malloc allocates memory of the given size on a leaf DRAM node of the policy
+// and returns the container ID of the committed allocation.
+func malloc(p *policy, size int64) (string, error) {
+	mallocSeq++
+	id := fmt.Sprintf("test-container-%d", mallocSeq)
 
 	var pool Node
 	for _, n := range p.pools {
@@ -150,30 +153,46 @@ func TestLibmemReleaseMem(t *testing.T) {
 		}
 	}
 	if pool == nil {
-		t.Fatal("no leaf DRAM node found in test system")
+		return "", fmt.Errorf("no leaf DRAM node found in test system")
 	}
-
-	ctr := &mockContainer{returnValueForGetID: "test-container-1"}
+	ctr := &mockContainer{returnValueForGetID: id}
 	req := &request{
 		memType:   memoryDRAM,
-		memReq:    64 * 1024 * 1024, // 64 MiB
+		memReq:    size,
 		container: ctr,
 	}
-
 	offer, err := p.getMemOffer(pool, req)
 	if err != nil {
-		t.Fatalf("getMemOffer failed: %v", err)
+		return "", fmt.Errorf("getMemOffer failed: %w", err)
 	}
 	if _, _, err := offer.Commit(); err != nil {
-		t.Fatalf("Offer.Commit() failed: %v", err)
+		return "", fmt.Errorf("Offer.Commit() failed: %w", err)
+	}
+	return id, nil
+}
+
+// free releases a previously committed memory allocation for the given container ID.
+func free(p *policy, id string) error {
+	return p.releaseMem(id)
+}
+
+// TestLibmemReleaseMem verifies that releaseMem releases a previously committed
+// memory allocation, and returns an error for an unknown ID.
+func TestLibmemReleaseMem(t *testing.T) {
+	p, dir := setupTestPolicy(t)
+	defer removeAll(t, dir)
+
+	id, err := malloc(p, 64*1024*1024) // 64 MiB
+	if err != nil {
+		t.Fatalf("malloc failed: %v", err)
 	}
 
-	if err := p.releaseMem(ctr.GetID()); err != nil {
-		t.Errorf("releaseMem failed for known ID: %v", err)
+	if err := free(p, id); err != nil {
+		t.Errorf("free failed for known ID: %v", err)
 	}
 
 	// Releasing the same ID again should return an error (unknown request).
-	if err := p.releaseMem(ctr.GetID()); err == nil {
+	if err := free(p, id); err == nil {
 		t.Error("expected error releasing unknown ID, got nil")
 	}
 }
