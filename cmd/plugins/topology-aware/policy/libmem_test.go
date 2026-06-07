@@ -54,24 +54,40 @@ type LibmemState struct {
 }
 
 // setupTestPolicy creates a policy from the server sysfs testdata.
+// If testdata/sysfs/server/sys already exists in the current directory it is
+// used directly and the returned dir is empty (caller must not delete it).
+// Otherwise the tarball is unpacked into a temp dir and that dir is returned
+// so the caller can clean it up with removeAll.
 func setupTestPolicy(t *testing.T) (*policy, string) {
 	t.Helper()
-	dir, err := os.MkdirTemp("", "nri-libmem-test-")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
-	if err := utils.UncompressTbz2(path.Join("testdata", "sysfs.tar.bz2"), dir); err != nil {
-		if rerr := os.RemoveAll(dir); rerr != nil {
-			t.Logf("failed to remove temp dir %q: %v", dir, rerr)
+
+	const preUnpacked = "testdata/sysfs/server/sys"
+	var sysPath string
+	var dir string
+
+	if _, err := os.Stat(preUnpacked); err == nil {
+		sysPath = preUnpacked
+	} else {
+		var err error
+		dir, err = os.MkdirTemp("", "nri-libmem-test-")
+		if err != nil {
+			t.Fatalf("failed to create temp dir: %v", err)
 		}
-		t.Fatalf("failed to uncompress testdata: %v", err)
+		if err := utils.UncompressTbz2(path.Join("testdata", "sysfs.tar.bz2"), dir); err != nil {
+			if rerr := os.RemoveAll(dir); rerr != nil {
+				t.Logf("failed to remove temp dir %q: %v", dir, rerr)
+			}
+			t.Fatalf("failed to uncompress testdata: %v", err)
+		}
+		sysPath = path.Join(dir, "sysfs", "server", "sys")
 	}
 
-	sysPath := path.Join(dir, "sysfs", "server", "sys")
 	sys, err := system.DiscoverSystemAt(sysPath)
 	if err != nil {
-		if rerr := os.RemoveAll(dir); rerr != nil {
-			t.Logf("failed to remove temp dir %q: %v", dir, rerr)
+		if dir != "" {
+			if rerr := os.RemoveAll(dir); rerr != nil {
+				t.Logf("failed to remove temp dir %q: %v", dir, rerr)
+			}
 		}
 		t.Fatalf("failed to discover system: %v", err)
 	}
@@ -84,8 +100,10 @@ func setupTestPolicy(t *testing.T) (*policy, string) {
 			ReservedResources: cfgapi.Constraints{cfgapi.CPU: "750m"},
 		},
 	}); err != nil {
-		if rerr := os.RemoveAll(dir); rerr != nil {
-			t.Logf("failed to remove temp dir %q: %v", dir, rerr)
+		if dir != "" {
+			if rerr := os.RemoveAll(dir); rerr != nil {
+				t.Logf("failed to remove temp dir %q: %v", dir, rerr)
+			}
 		}
 		t.Fatalf("failed to setup policy: %v", err)
 	}
