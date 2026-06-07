@@ -343,7 +343,7 @@ func (s *LibmemState) String() string {
 		names = append(names, name)
 	}
 	sort.Strings(names)
-	return fmt.Sprintf("[free:%dMiB allocs:[%s]]", s.freeBytes>>20, strings.Join(names, " "))
+	return fmt.Sprintf("[free:%dGB allocs:[%s]]", s.freeBytes>>30, strings.Join(names, " "))
 }
 
 func createPod(pod string, cpu, rcpu, mem int) m.StateChange {
