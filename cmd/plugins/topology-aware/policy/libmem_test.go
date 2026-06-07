@@ -441,6 +441,7 @@ var (
 	maxLibmem2Steps int
 	libmem2Search   int
 	callerDepth     int
+	fmbtV           int
 )
 
 // init switches CommandLine to ContinueOnError so that the test framework's
@@ -509,6 +510,7 @@ func TestLibmemGofmbt2(t *testing.T) {
 	flag.IntVar(&maxLibmem2Steps, "libmem2-steps", 1000, "number of test steps for TestLibmemGofmbt2")
 	flag.IntVar(&libmem2Search, "libmem2-search-depth", 4, "look-ahead depth for TestLibmemGofmbt2")
 	flag.IntVar(&callerDepth, "caller-depth", 1, "number of caller frames printed by malloc() and free()")
+	flag.IntVar(&fmbtV, "fmbt-v", 1, "verbosity for TestLibmemGofmbt2: 1=basic, 2=include caller info in mallocFn/freeFn")
 
 	flag.Parse()
 
@@ -572,7 +574,11 @@ func TestLibmemGofmbt2(t *testing.T) {
 			}
 			newAllocs[name] = size
 			pc, _, _, _ := runtime.Caller(1)
-			fmt.Printf("mallocFn %s (%d MiB) called from %s\n", name, size>>20, runtime.FuncForPC(pc).Name())
+			if fmbtV >= 2 {
+				fmt.Printf("mallocFn(%dGB) called from %s\n", size>>30, runtime.FuncForPC(pc).Name())
+			} else {
+				fmt.Printf("mallocFn(%dGB)\n", size>>30)
+			}
 			return &LibmemState{freeBytes: s.freeBytes - size, allocs: newAllocs}
 		}
 	}
@@ -591,7 +597,11 @@ func TestLibmemGofmbt2(t *testing.T) {
 				}
 			}
 			pc, _, _, _ := runtime.Caller(1)
-			fmt.Printf("freeFn %s (%d MiB) called from %s\n", name, size>>20, runtime.FuncForPC(pc).Name())
+			if fmbtV >= 2 {
+				fmt.Printf("freeFn(%dGB) called from %s\n", size>>30, runtime.FuncForPC(pc).Name())
+			} else {
+				fmt.Printf("freeFn(%dGB)\n", size>>30)
+			}
 			return &LibmemState{freeBytes: s.freeBytes + size, allocs: newAllocs}
 		}
 	}
