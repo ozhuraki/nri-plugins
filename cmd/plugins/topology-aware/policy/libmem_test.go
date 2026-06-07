@@ -107,7 +107,40 @@ func setupTestPolicy(t *testing.T) (*policy, string) {
 		}
 		t.Fatalf("failed to setup policy: %v", err)
 	}
+	printSystemDRAM(sys)
 	return p, dir
+}
+
+// printSystemDRAM prints DRAM capacity per NUMA node and the total.
+func printSystemDRAM(sys system.System) {
+	var total uint64
+	for _, id := range sys.NodeIDs() {
+		n := sys.Node(id)
+		if n.GetMemoryType() != system.MemoryTypeDRAM {
+			continue
+		}
+		info, err := n.MemoryInfo()
+		if err != nil || info == nil {
+			continue
+		}
+		fmt.Printf("  NUMA node %d DRAM: %s\n", id, formatBytes(info.MemTotal))
+		total += info.MemTotal
+	}
+	fmt.Printf("  DRAM total: %s\n", formatBytes(total))
+}
+
+// formatBytes formats a byte count in a human-readable form (GiB/MiB/KiB/B).
+func formatBytes(b uint64) string {
+	switch {
+	case b >= 1<<30:
+		return fmt.Sprintf("%.1f GiB", float64(b)/float64(1<<30))
+	case b >= 1<<20:
+		return fmt.Sprintf("%.1f MiB", float64(b)/float64(1<<20))
+	case b >= 1<<10:
+		return fmt.Sprintf("%.1f KiB", float64(b)/float64(1<<10))
+	default:
+		return fmt.Sprintf("%d B", b)
+	}
 }
 
 // TestLibmemGetMemOfferByHintsMemoryPreserve verifies that getMemOfferByHints
