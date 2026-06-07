@@ -480,6 +480,35 @@ func TestLibmemGofmbt2(t *testing.T) {
 		totalAllocBytes += size
 	}
 
+	allocIDs := map[string]string{} // abstract name -> real container ID
+	var execute bool                 // true only during step execution; guards doMalloc/doFree from BestPath exploration calls
+
+	doMalloc := func(name string) (string, error) {
+		if !execute {
+			return "", nil
+		}
+		id, err := malloc(p, allocSizes[name])
+		if err == nil {
+			allocIDs[name] = id
+		}
+		return id, err
+	}
+
+	doFree := func(name string) error {
+		if !execute {
+			return nil
+		}
+		id, ok := allocIDs[name]
+		if !ok {
+			return nil
+		}
+		err := free(p, id)
+		if err == nil {
+			delete(allocIDs, name)
+		}
+		return err
+	}
+
 	mallocFn := func(name string, size int64) m.StateChange {
 		return func(curr m.State) m.State {
 			s := curr.(*LibmemState)
@@ -523,7 +552,7 @@ func TestLibmemGofmbt2(t *testing.T) {
 		var ts []*m.Transition
 		for _, name := range allocNames {
 			if _, ok := s.allocs[name]; !ok && s.freeBytes >= allocSizes[name] {
-				ts = append(ts, m.OnAction("malloc %s", name).Do(mallocFn(name, allocSizes[name]))...)
+				ts = append(ts, m.OnAction("malloc %s", name).Register(doMalloc, name).Do(mallocFn(name, allocSizes[name]))...)
 			}
 		}
 		return ts
@@ -534,7 +563,7 @@ func TestLibmemGofmbt2(t *testing.T) {
 		var ts []*m.Transition
 		for _, name := range allocNames {
 			if _, ok := s.allocs[name]; ok {
-				ts = append(ts, m.OnAction("free %s", name).Do(freeFn(name))...)
+				ts = append(ts, m.OnAction("free %s", name).Register(doFree, name).Do(freeFn(name))...)
 			}
 		}
 		return ts
@@ -548,8 +577,6 @@ func TestLibmemGofmbt2(t *testing.T) {
 		allocs:    map[string]int64{},
 	})
 
-	allocIDs := map[string]string{} // abstract name -> real container ID
-
 	testStep := 0
 	for testStep < maxLibmem2Steps {
 		path, covStats := coverer.BestPath(model, state, libmem2Search)
@@ -561,23 +588,12 @@ func TestLibmemGofmbt2(t *testing.T) {
 			step := path[i]
 			fmt.Printf("\necho === step:%d coverage:%d state:%v\n", testStep, coverer.Coverage(), state)
 			fmt.Println(step.Action())
-			action := step.Action().String()
-			switch {
-			case strings.HasPrefix(action, "malloc "):
-				name := action[len("malloc "):]
-				id, err := malloc(p, allocSizes[name])
-				if err != nil {
-					t.Errorf("step %d: malloc %s failed: %v", testStep, name, err)
-				} else {
-					allocIDs[name] = id
-				}
-			case strings.HasPrefix(action, "free "):
-				name := action[len("free "):]
-				if id, ok := allocIDs[name]; ok {
-					if err := free(p, id); err != nil {
-						t.Errorf("step %d: free %s (id=%s) failed: %v", testStep, name, id, err)
-					}
-					delete(allocIDs, name)
+			execute = true
+			results := step.Action().Execute()
+			execute = false
+			if len(results) > 0 {
+				if err, _ := results[len(results)-1].(error); err != nil {
+					t.Errorf("step %d: %s failed: %v", testStep, step.Action(), err)
 				}
 			}
 			state = step.EndState()
