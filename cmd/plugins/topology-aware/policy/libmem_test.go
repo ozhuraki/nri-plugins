@@ -543,11 +543,11 @@ func TestLibmemGofmbt2(t *testing.T) {
 
 	allocNames := []string{"a0", "a1", "a2", "a3", "a4"}
 	allocSizes := map[string]int64{
-		"a0": 1 << 30,
-		"a1": 2 << 30,
-		"a2": 4 << 30,
-		"a3": 8 << 30,
-		"a4": 16 << 30,
+		"a0": 2 << 30,
+		"a1": 4 << 30,
+		"a2": 8 << 30,
+		"a3": 16 << 30,
+		"a4": 32 << 30,
 	}
 
 	var totalAllocBytes int64
