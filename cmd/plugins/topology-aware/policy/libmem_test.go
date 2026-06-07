@@ -471,9 +471,6 @@ var (
 // (e.g. -caller-depth), allowing them to be passed from the command line.
 func init() {
 	flag.CommandLine.Init(os.Args[0], flag.ContinueOnError)
-}
-
-func TestLibmemGofmbt(t *testing.T) {
 	flag.IntVar(&maxMem, "mem", 7500, "memory available for test pods")
 	flag.IntVar(&maxCpu, "cpu", 15000, "non-reserved milli-CPU available for test pods")
 	flag.IntVar(&maxReservedCpu, "reserved-cpu", 1000, "reserved milli-CPU availble for test pods")
@@ -481,9 +478,13 @@ func TestLibmemGofmbt(t *testing.T) {
 	flag.Int64Var(&randomSeed, "random-seed", 0, "random seed for selecting best path")
 	flag.IntVar(&randomness, "randomness", 0, "the greater the randomness, the larger the set of paths for choosing best path. 0 means no randomness, 5 picks any path that increases coverage.")
 	flag.IntVar(&searchDepth, "search-depth", 4, "number of steps to look ahead when selecting best path")
+	flag.IntVar(&maxLibmem2Steps, "libmem2-steps", 1000, "number of test steps for TestLibmemGofmbt2")
+	flag.IntVar(&libmem2Search, "libmem2-search-depth", 4, "look-ahead depth for TestLibmemGofmbt2")
+	flag.IntVar(&callerDepth, "caller-depth", 1, "number of caller frames printed by malloc() and free()")
+	flag.IntVar(&fmbtV, "fmbt-v", 0, "verbosity for TestLibmemGofmbt2: 1=basic, 2=include caller info in mallocFn/freeFn")
+}
 
-	flag.Parse()
-
+func TestLibmemGofmbt(t *testing.T) {
 	_, generateGoFile, _, _ := runtime.Caller(0)
 
 	model := newModel()
@@ -529,13 +530,6 @@ func TestLibmemGofmbt(t *testing.T) {
 // TestLibmemGofmbt2 uses gofmbt model-based testing to drive malloc/free
 // sequences against the policy, verifying that all operations succeed.
 func TestLibmemGofmbt2(t *testing.T) {
-	flag.IntVar(&maxLibmem2Steps, "libmem2-steps", 1000, "number of test steps for TestLibmemGofmbt2")
-	flag.IntVar(&libmem2Search, "libmem2-search-depth", 4, "look-ahead depth for TestLibmemGofmbt2")
-	flag.IntVar(&callerDepth, "caller-depth", 1, "number of caller frames printed by malloc() and free()")
-	flag.IntVar(&fmbtV, "fmbt-v", 0, "verbosity for TestLibmemGofmbt2: 1=basic, 2=include caller info in mallocFn/freeFn")
-
-	flag.Parse()
-
 	klog.SetLogger(logr.Discard())
 	p, dir := setupTestPolicy(t)
 	klog.ClearLogger()
