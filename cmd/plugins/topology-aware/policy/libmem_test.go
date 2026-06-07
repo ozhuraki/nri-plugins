@@ -208,17 +208,21 @@ func malloc(p *policy, size int64) (string, error) {
 	mallocSeq++
 	id := fmt.Sprintf("%d", mallocSeq)
 
-	fmt.Printf("malloc(%dGB)\n", size>>30)
+	fmt.Printf("malloc(%dGB)", size>>30)
 	if fmbtV >= 1 {
-		fmt.Printf("  id=%s\n", id)
+		fmt.Printf(" id=%s", id)
 	}
 	for i := 1; i <= callerDepth; i++ {
-		pc, file, line, ok := runtime.Caller(i)
+		pc, _, _, ok := runtime.Caller(i)
 		if !ok {
 			break
 		}
-		fmt.Printf("  [%d] %s (%s:%d)\n", i, runtime.FuncForPC(pc).Name(), file, line)
+		full := runtime.FuncForPC(pc).Name()
+		short := full[strings.LastIndex(full, "/")+1:]
+		short = short[strings.Index(short, ".")+1:]
+		fmt.Printf(" %s()", short)
 	}
+	fmt.Println()
 
 	var pool Node
 	for _, n := range p.pools {
@@ -249,17 +253,21 @@ func malloc(p *policy, size int64) (string, error) {
 
 // free releases a previously committed memory allocation for the given container ID.
 func free(p *policy, id string) error {
-	fmt.Printf("free(%dGB)\n", mallocSizeByID[id]>>30)
+	fmt.Printf("free(%dGB)", mallocSizeByID[id]>>30)
 	if fmbtV >= 1 {
-		fmt.Printf("  id=%s\n", id)
+		fmt.Printf(" id=%s", id)
 	}
 	for i := 1; i <= callerDepth; i++ {
-		pc, file, line, ok := runtime.Caller(i)
+		pc, _, _, ok := runtime.Caller(i)
 		if !ok {
 			break
 		}
-		fmt.Printf("  [%d] %s (%s:%d)\n", i, runtime.FuncForPC(pc).Name(), file, line)
+		full := runtime.FuncForPC(pc).Name()
+		short := full[strings.LastIndex(full, "/")+1:]
+		short = short[strings.Index(short, ".")+1:]
+		fmt.Printf(" %s()", short)
 	}
+	fmt.Println()
 	err := p.releaseMem(id)
 	if err == nil {
 		delete(mallocSizeByID, id)
@@ -662,7 +670,11 @@ func TestLibmemGofmbt2(t *testing.T) {
 			testStep++
 			step := path[i]
 			fmt.Printf("\necho === step:%d coverage:%d state:%v\n", testStep, coverer.Coverage(), state)
-			fmt.Println(step.Action())
+			pc, _, _, _ := runtime.Caller(0)
+			full := runtime.FuncForPC(pc).Name()
+			short := full[strings.LastIndex(full, "/")+1:]
+			short = short[strings.Index(short, ".")+1:]
+			fmt.Printf("%s %s()\n", step.Action(), short)
 			execute = true
 			results := step.Action().Execute()
 			execute = false
