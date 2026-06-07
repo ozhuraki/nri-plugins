@@ -203,9 +203,12 @@ var mallocSeq int
 // and returns the container ID of the committed allocation.
 func malloc(p *policy, size int64) (string, error) {
 	mallocSeq++
-	id := fmt.Sprintf("test-container-%d", mallocSeq)
+	id := fmt.Sprintf("%d", mallocSeq)
 
-	fmt.Printf("malloc: id=%s size=%d\n", id, size)
+	fmt.Printf("malloc(%dGB)\n", size>>30)
+	if fmbtV >= 1 {
+		fmt.Printf("  id=%s\n", id)
+	}
 	for i := 1; i <= callerDepth; i++ {
 		pc, file, line, ok := runtime.Caller(i)
 		if !ok {
@@ -242,7 +245,10 @@ func malloc(p *policy, size int64) (string, error) {
 
 // free releases a previously committed memory allocation for the given container ID.
 func free(p *policy, id string) error {
-	fmt.Printf("free: id=%s\n", id)
+	fmt.Printf("free()\n")
+	if fmbtV >= 1 {
+		fmt.Printf("  id=%s\n", id)
+	}
 	for i := 1; i <= callerDepth; i++ {
 		pc, file, line, ok := runtime.Caller(i)
 		if !ok {
@@ -510,7 +516,7 @@ func TestLibmemGofmbt2(t *testing.T) {
 	flag.IntVar(&maxLibmem2Steps, "libmem2-steps", 1000, "number of test steps for TestLibmemGofmbt2")
 	flag.IntVar(&libmem2Search, "libmem2-search-depth", 4, "look-ahead depth for TestLibmemGofmbt2")
 	flag.IntVar(&callerDepth, "caller-depth", 1, "number of caller frames printed by malloc() and free()")
-	flag.IntVar(&fmbtV, "fmbt-v", 1, "verbosity for TestLibmemGofmbt2: 1=basic, 2=include caller info in mallocFn/freeFn")
+	flag.IntVar(&fmbtV, "fmbt-v", 0, "verbosity for TestLibmemGofmbt2: 1=basic, 2=include caller info in mallocFn/freeFn")
 
 	flag.Parse()
 
