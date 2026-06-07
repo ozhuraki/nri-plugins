@@ -337,9 +337,9 @@ func init() {
 	flag.IntVar(&fmbtV, "fmbt-v", 0, "verbosity for TestLibmemGofmbt2: 1=basic, 2=include caller info in mallocFn/freeFn")
 }
 
-// TestLibmemGofmbt2 uses gofmbt model-based testing to drive malloc/free
+// TestLibmemGofmbt uses gofmbt model-based testing to drive malloc/free
 // sequences against the policy, verifying that all operations succeed.
-func TestLibmemGofmbt2(t *testing.T) {
+func TestLibmemGofmbt(t *testing.T) {
 	klog.SetLogger(logr.Discard())
 	p, dir := setupTestPolicy(t)
 	klog.ClearLogger()
