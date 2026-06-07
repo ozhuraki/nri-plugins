@@ -669,7 +669,7 @@ func TestLibmemGofmbt2(t *testing.T) {
 		for i := 0; i <= covStats.MaxStep; i++ {
 			testStep++
 			step := path[i]
-			fmt.Printf("\nstep:%d coverage:%d state:%v\n", testStep, coverer.Coverage(), state)
+			fmt.Printf("step:%d coverage:%d state:%v\n", testStep, coverer.Coverage(), state)
 			pc, _, _, _ := runtime.Caller(0)
 			full := runtime.FuncForPC(pc).Name()
 			short := full[strings.LastIndex(full, "/")+1:]
