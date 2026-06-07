@@ -199,6 +199,9 @@ func TestLibmemGetMemOfferByHintsNoHints(t *testing.T) {
 // mallocSeq is used to generate unique container IDs in malloc.
 var mallocSeq int
 
+// mallocSizeByID tracks the allocated size per container ID so free() can print it.
+var mallocSizeByID = map[string]int64{}
+
 // malloc allocates memory of the given size on a leaf DRAM node of the policy
 // and returns the container ID of the committed allocation.
 func malloc(p *policy, size int64) (string, error) {
@@ -240,12 +243,13 @@ func malloc(p *policy, size int64) (string, error) {
 	if _, _, err := offer.Commit(); err != nil {
 		return "", fmt.Errorf("Offer.Commit() failed: %w", err)
 	}
+	mallocSizeByID[id] = size
 	return id, nil
 }
 
 // free releases a previously committed memory allocation for the given container ID.
 func free(p *policy, id string) error {
-	fmt.Printf("free()\n")
+	fmt.Printf("free(%dGB)\n", mallocSizeByID[id]>>30)
 	if fmbtV >= 1 {
 		fmt.Printf("  id=%s\n", id)
 	}
@@ -256,7 +260,11 @@ func free(p *policy, id string) error {
 		}
 		fmt.Printf("  [%d] %s (%s:%d)\n", i, runtime.FuncForPC(pc).Name(), file, line)
 	}
-	return p.releaseMem(id)
+	err := p.releaseMem(id)
+	if err == nil {
+		delete(mallocSizeByID, id)
+	}
+	return err
 }
 
 // TestLibmemReleaseMem verifies that releaseMem releases a previously committed
