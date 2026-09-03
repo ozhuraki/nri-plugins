@@ -439,7 +439,7 @@ func TestLibmemGofmbt(t *testing.T) {
 		var ts []*m.Transition
 		for _, name := range allocNames {
 			if _, ok := s.allocs[name]; !ok && s.freeBytes >= allocSizes[name] {
-				ts = append(ts, m.OnAction("malloc %s", name).Register(doMalloc, name).Do(mallocFn(name, allocSizes[name]))...)
+				ts = append(ts, m.OnAction("malloc %s", name).WithTest(doMalloc, name).Do(mallocFn(name, allocSizes[name]))...)
 			}
 		}
 		return ts
@@ -450,7 +450,7 @@ func TestLibmemGofmbt(t *testing.T) {
 		var ts []*m.Transition
 		for _, name := range allocNames {
 			if _, ok := s.allocs[name]; ok {
-				ts = append(ts, m.OnAction("free %s", name).Register(doFree, name).Do(freeFn(name))...)
+				ts = append(ts, m.OnAction("free %s", name).WithTest(doFree, name).Do(freeFn(name))...)
 			}
 		}
 		return ts
