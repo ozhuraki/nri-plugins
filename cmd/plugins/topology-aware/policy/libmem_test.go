@@ -480,7 +480,7 @@ func TestLibmemGofmbt(t *testing.T) {
 			short = short[strings.Index(short, ".")+1:]
 			fmt.Printf("%s %s()\n", step.Action(), short)
 			execute = true
-			results := step.Action().Execute()
+			results := step.Action().Test()
 			execute = false
 			if len(results) > 0 {
 				if err, _ := results[len(results)-1].(error); err != nil {
