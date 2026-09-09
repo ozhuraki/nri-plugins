@@ -24,6 +24,7 @@ import (
 	policyapi "github.com/containers/nri-plugins/pkg/resmgr/policy"
 	system "github.com/containers/nri-plugins/pkg/sysfs"
 	"github.com/containers/nri-plugins/pkg/utils"
+	m "github.com/ozhuraki/gofmbt/gofmbt"
 )
 
 // setupTestPolicy creates a policy from the server sysfs testdata.
